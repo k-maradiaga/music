@@ -2,8 +2,11 @@
 title: "Untitled"
 output: 
   flexdashboard::flex_dashboard:
+    storyboard: true
+    theme: plotly
+<!--   flexdashboard::flex_dashboard:
     orientation: columns
-    vertical_layout: fill
+    vertical_layout: fill -->
 ---
 
 ```{r setup, include=FALSE}
