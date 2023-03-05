@@ -20,23 +20,151 @@ europe <- get_playlist_audio_features("", "64wQFeHk3LgbPB2x6z3JNk")
 asia <- get_playlist_audio_features("", "1YPj89O7XSAEwHSqQmquck")
 americas <- get_playlist_audio_features("", "3col0xqk1N1zGenOzf5O34")
 ```
-Corpus
-=========================================
-
-### Introduction
-
-The corpus that is used in my analysis consists out of all the national anthems of the world. The aim of this corpus is to analyze what musical characteristics of a song make it a national anthem. I find it interesting to see how one song can become so nationally known and rooted in a country. Within the corpus the music therefore all share the common factor that it is the national anthem of a country. One interesting aspect to consider is the geographical and cultural influences of national anthems to see if countries that are close together also share similarities of the same style in their national anthems. Another point of comparison could be the year that the national anthem song has been composed to see if it has any impact on the style of the national anthem compared to other countries that were composed in the same time period.
-
-Typical national anthems are hard to define but one national anthem that stands out from the rest is the one from Nepal which anthem was introduced relatively recently and therefore uses more modern instruments distinguishing it from most older anthems.
-
-It is important to note that the corpus is representative of all the national anthems of today, however, many national anthems have changed over time since their original composition. This can be seen as a limitation of the analysis, as it does not account for the historical evolution of national anthems. Nevertheless, this corpus offers a wealth of information about the musical characteristics of national anthems and is still able to provide a strong representation of the cultural heritage of a country.
-
-```{r}
-
-```
 
 Visualizations {.storyboard}
 =========================================
+### Similarity Matrix
+#### Timbre
+
+```{r}
+# Cepstrograms
+bzt <-
+  get_tidy_audio_analysis("50Ex1WYMkbe4mwdroVdLFP") |> # Change URI.
+  compmus_align(bars, segments) |>                     # Change `bars`
+  select(bars) |>                                      #   in all three
+  unnest(bars) |>                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+          compmus_summarise, pitches,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) |>
+  mutate(
+    timbre =
+      map(segments,
+          compmus_summarise, timbre,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+
+bzt |>
+  compmus_gather_timbre() |>
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = basis,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
+  scale_fill_viridis_c() +                              
+  theme_classic()+
+  ggtitle("Timbre")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+# SELF SIMILARITY MATRIX
+bzt |>
+  compmus_self_similarity(timbre, "cosine") |> 
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  labs(x = "", y = "")+
+  ggtitle("Timbre")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+#### Chroma
+
+```{r}
+
+bzt <-
+  get_tidy_audio_analysis("50Ex1WYMkbe4mwdroVdLFP") |> # Change URI.
+  compmus_align(bars, segments) |>                     # Change `bars`
+  select(bars) |>                                      #   in all three
+  unnest(bars) |>                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+          compmus_summarise, pitches,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) |>
+  mutate(
+    timbre =
+      map(segments,
+          compmus_summarise, timbre,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+
+
+bzt |>
+  mutate(pitches = map(pitches, compmus_normalise, "chebyshev")) |>
+  compmus_gather_chroma() |> 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
+  theme_minimal() +
+  scale_fill_viridis_c()+
+  ggtitle("Chroma")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+
+
+# SELF SIMILARITY MATRIX
+bzt |>
+  compmus_self_similarity(pitches, "cosine") |> 
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  labs(x = "", y = "") +
+  ggtitle("Chroma")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+***
+In this section, the chroma and timbre of the Chinese National Anthem are compared.
+The first plots show the timbre changes which are mostly present on the c3 level. When listening to the song the timbre seems to correlate with the sounds of the trumpets. At around 6 seconds there is a small dip visible and at around 21 seconds there is a gap which align with the sound of the trumpets in the song.
+
+The chromagram shows that the song is mostly grounded by B, G, D. Like the cepstrogram that shows the timbre, at around 21 seconds there is a clear gap visible, where D gets a lower magnitude. The magnitude of G and B get bigger around that time.
+
+
+
 ### Instrumentalness vs danceability
 
 #### Instrumentalness vs danceability
@@ -194,145 +322,22 @@ china_chroma |>
 ***
 The chromagram shows a lot of repetitive G, D and B.
 
-### Similarity Matrix
-#### Timbre
 
-```{r}
-# Cepstrograms
-bzt <-
-  get_tidy_audio_analysis("50Ex1WYMkbe4mwdroVdLFP") |> # Change URI.
-  compmus_align(bars, segments) |>                     # Change `bars`
-  select(bars) |>                                      #   in all three
-  unnest(bars) |>                                      #   of these lines.
-  mutate(
-    pitches =
-      map(segments,
-          compmus_summarise, pitches,
-          method = "rms", norm = "euclidean"              # Change summary & norm.
-      )
-  ) |>
-  mutate(
-    timbre =
-      map(segments,
-          compmus_summarise, timbre,
-          method = "rms", norm = "euclidean"              # Change summary & norm.
-      )
-  )
+Corpus
+=========================================
 
+### Introduction
 
-bzt |>
-  compmus_gather_timbre() |>
-  ggplot(
-    aes(
-      x = start + duration / 2,
-      width = duration,
-      y = basis,
-      fill = value
-    )
-  ) +
-  geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
-  scale_fill_viridis_c() +                              
-  theme_classic()+
-  ggtitle("Timbre")+
-  theme(plot.title = element_text(hjust = 0.5))
+The corpus that is used in my analysis consists out of all the national anthems of the world. The aim of this corpus is to analyze what musical characteristics of a song make it a national anthem. I find it interesting to see how one song can become so nationally known and rooted in a country. Within the corpus the music therefore all share the common factor that it is the national anthem of a country. One interesting aspect to consider is the geographical and cultural influences of national anthems to see if countries that are close together also share similarities of the same style in their national anthems. Another point of comparison could be the year that the national anthem song has been composed to see if it has any impact on the style of the national anthem compared to other countries that were composed in the same time period.
 
+Typical national anthems are hard to define but one national anthem that stands out from the rest is the one from Nepal which anthem was introduced relatively recently and therefore uses more modern instruments distinguishing it from most older anthems.
 
-# SELF SIMILARITY MATRIX
-bzt |>
-  compmus_self_similarity(timbre, "cosine") |> 
-  ggplot(
-    aes(
-      x = xstart + xduration / 2,
-      width = xduration,
-      y = ystart + yduration / 2,
-      height = yduration,
-      fill = d
-    )
-  ) +
-  geom_tile() +
-  coord_fixed() +
-  scale_fill_viridis_c(guide = "none") +
-  theme_classic() +
-  labs(x = "", y = "")+
-  ggtitle("Timbre")+
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-#### Chroma
+It is important to note that the corpus is representative of all the national anthems of today, however, many national anthems have changed over time since their original composition. This can be seen as a limitation of the analysis, as it does not account for the historical evolution of national anthems. Nevertheless, this corpus offers a wealth of information about the musical characteristics of national anthems and is still able to provide a strong representation of the cultural heritage of a country.
 
 ```{r}
 
-bzt <-
-  get_tidy_audio_analysis("50Ex1WYMkbe4mwdroVdLFP") |> # Change URI.
-  compmus_align(bars, segments) |>                     # Change `bars`
-  select(bars) |>                                      #   in all three
-  unnest(bars) |>                                      #   of these lines.
-  mutate(
-    pitches =
-      map(segments,
-          compmus_summarise, pitches,
-          method = "rms", norm = "euclidean"              # Change summary & norm.
-      )
-  ) |>
-  mutate(
-    timbre =
-      map(segments,
-          compmus_summarise, timbre,
-          method = "rms", norm = "euclidean"              # Change summary & norm.
-      )
-  )
-
-
-
-bzt |>
-  mutate(pitches = map(pitches, compmus_normalise, "chebyshev")) |>
-  compmus_gather_chroma() |> 
-  ggplot(
-    aes(
-      x = start + duration / 2,
-      width = duration,
-      y = pitch_class,
-      fill = value
-    )
-  ) +
-  geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
-  theme_minimal() +
-  scale_fill_viridis_c()+
-  ggtitle("Chroma")+
-  theme(plot.title = element_text(hjust = 0.5))
-
-
-
-
-
-# SELF SIMILARITY MATRIX
-bzt |>
-  compmus_self_similarity(pitches, "cosine") |> 
-  ggplot(
-    aes(
-      x = xstart + xduration / 2,
-      width = xduration,
-      y = ystart + yduration / 2,
-      height = yduration,
-      fill = d
-    )
-  ) +
-  geom_tile() +
-  coord_fixed() +
-  scale_fill_viridis_c(guide = "none") +
-  theme_classic() +
-  labs(x = "", y = "") +
-  ggtitle("Chroma")+
-  theme(plot.title = element_text(hjust = 0.5))
 ```
 
-***
-In this section, the chroma and timbre of the Chinese National Anthem are compared.
-The first plots show the timbre changes which are mostly present on the c3 level. When listening to the song the timbre seems to correlate with the sounds of the trumpets. At around 6 seconds there is a small dip visible and at around 21 seconds there is a gap which align with the sound of the trumpets in the song.
-
-The chromagram shows that the song is mostly grounded by B, G, D. Like the cepstrogram that shows the timbre, at around 21 seconds there is a clear gap visible, where D gets a lower magnitude. The magnitude of G and B get bigger around that time.
 
 Conclusions
 =========================================
