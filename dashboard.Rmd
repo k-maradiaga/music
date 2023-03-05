@@ -1,39 +1,345 @@
 ---
-title: "Untitled"
+title: "Computational Musicology: National Anthems of the world"
 output: 
   flexdashboard::flex_dashboard:
     storyboard: true
-    theme: plotly
-<!--   flexdashboard::flex_dashboard:
     orientation: columns
-    vertical_layout: fill -->
+    vertical_layout: fill
+    theme: cosmo
 ---
 
 ```{r setup, include=FALSE}
 library(flexdashboard)
+library(shiny)
+library(tidyverse)
+library(ggplot2)
+library(spotifyr)
+library(plotly)
+library(compmus)
+europe <- get_playlist_audio_features("", "64wQFeHk3LgbPB2x6z3JNk")
+asia <- get_playlist_audio_features("", "1YPj89O7XSAEwHSqQmquck")
+americas <- get_playlist_audio_features("", "3col0xqk1N1zGenOzf5O34")
 ```
+Corpus
+=========================================
 
-Column {data-width=650}
------------------------------------------------------------------------
+### Introduction
 
-### Chart A
+The corpus that is used in my analysis consists out of all the national anthems of the world. The aim of this corpus is to analyze what musical characteristics of a song make it a national anthem. I find it interesting to see how one song can become so nationally known and rooted in a country. Within the corpus the music therefore all share the common factor that it is the national anthem of a country. One interesting aspect to consider is the geographical and cultural influences of national anthems to see if countries that are close together also share similarities of the same style in their national anthems. Another point of comparison could be the year that the national anthem song has been composed to see if it has any impact on the style of the national anthem compared to other countries that were composed in the same time period.
+
+Typical national anthems are hard to define but one national anthem that stands out from the rest is the one from Nepal which anthem was introduced relatively recently and therefore uses more modern instruments distinguishing it from most older anthems.
+
+It is important to note that the corpus is representative of all the national anthems of today, however, many national anthems have changed over time since their original composition. This can be seen as a limitation of the analysis, as it does not account for the historical evolution of national anthems. Nevertheless, this corpus offers a wealth of information about the musical characteristics of national anthems and is still able to provide a strong representation of the cultural heritage of a country.
 
 ```{r}
 
 ```
 
-Column {data-width=350}
------------------------------------------------------------------------
+Visualizations {.storyboard}
+=========================================
+### Instrumentalness vs danceability
 
-### Chart B
+#### Instrumentalness vs danceability
 
 ```{r}
+
+awards <-
+  bind_rows(
+    europe |> mutate(category = "Europe"),
+    asia |> mutate(category = "Asia"),
+    americas |> mutate(category = "Americas")
+  )
+
+
+
+plot1 <- 
+awards |>                    # Start with awards.
+  mutate(
+    mode = ifelse(mode == 0, "Minor", "Major")
+  ) |>
+  ggplot(                     # Set up the plot.
+    aes(
+      x = instrumentalness,
+      y = danceability,
+      size = energy,
+      colour = mode,
+      text = track.name
+    )
+  ) +
+  geom_point() +              # Scatter plot.
+  geom_rug(linewidth = 0.1) + # Add 'fringes' to show data distribution.
+  
+  facet_wrap(~ category) +    # Separate charts per playlist.
+  scale_x_continuous(         # Fine-tune the x axis.
+    limits = c(0, 1),
+    breaks = c(0, 0.50, 1),   # Use grid-lines for quadrants only.
+    minor_breaks = NULL       # Remove 'minor' grid-lines.
+  ) +
+  scale_y_continuous(         # Fine-tune the y axis in the same way.
+    limits = c(0, 1),
+    breaks = c(0, 0.50, 1),
+    minor_breaks = NULL
+  ) +
+  scale_colour_brewer(        # Use the Color Brewer to choose a palette.
+    type = "qual",            # Qualitative set.
+    palette = "Paired"        # Name of the palette is 'Paired'.
+  ) +
+  scale_size_continuous(      # Fine-tune the sizes of each point.
+    trans = "exp",            # Use an exp transformation to emphasise loud.
+    guide = "none"            # Remove the legend for size.
+  ) +
+  theme_light() +             # Use a simpler theme.
+  labs(                       # Make the titles nice.
+    x = "Instrumentalness",
+    y = "Dancebility",
+    colour = "Mode"
+  ) 
+
+
+ggplotly(plot1)
+
+```
+***
+This plot shows the danceability and the instrumentalness of the national anthems around the world. The size of the data points indicates the level of energy. The color illustrates whether or not the data point is in Minor or Major. From this plot, the american continent has the most instrumentalness in their national anthems. The most danceable national anthem is in Asia, Kuwait has a danceability of 0.8760.
+
+### Energy vs Valence
+#### Energy vs Valence
+```{r}
+awards <-
+  bind_rows(
+    europe |> mutate(category = "Europe"),
+    asia |> mutate(category = "Asia"),
+    americas |> mutate(category = "Americas")
+  )
+
+
+
+plotje <- awards |>                    # Start with awards.
+  mutate(
+    mode = ifelse(mode == 0, "Minor", "Major")
+  ) |>
+  ggplot(                     # Set up the plot.
+    aes(
+      x = valence,
+      y = energy,
+      size = loudness,
+      colour = mode,
+      text = track.name
+    )
+  ) +
+  geom_point() +              # Scatter plot.
+  geom_rug(linewidth = 0.1) + # Add 'fringes' to show data distribution.
+  
+  facet_wrap(~ category) +    # Separate charts per playlist.
+  scale_x_continuous(         # Fine-tune the x axis.
+    limits = c(0, 1),
+    breaks = c(0, 0.50, 1),   # Use grid-lines for quadrants only.
+    minor_breaks = NULL       # Remove 'minor' grid-lines.
+  ) +
+  scale_y_continuous(         # Fine-tune the y axis in the same way.
+    limits = c(0, 1),
+    breaks = c(0, 0.50, 1),
+    minor_breaks = NULL
+  ) +
+  scale_colour_brewer(        # Use the Color Brewer to choose a palette.
+    type = "qual",            # Qualitative set.
+    palette = "Paired"        # Name of the palette is 'Paired'.
+  ) +
+  scale_size_continuous(      # Fine-tune the sizes of each point.
+    trans = "exp",            # Use an exp transformation to emphasise loud.
+    guide = "none"            # Remove the legend for size.
+  ) +
+  theme_light() +             # Use a simpler theme.
+  labs(                       # Make the titles nice.
+    x = "Valence",
+    y = "Energy",
+    colour = "Mode"
+  )
+
+ggplotly(plotje)
+```
+
+***
+This plots compare the Valence and Energy of each country within the playlists. For the american continent, most countries are clearly centered around 0.5 Valence. All the countries have an Energy of 0.5 and are in Major. The country that has the loudest national anthem is Canada with a loudness of 8.10e-5. The country national anthem with the highest Energy is that of the United States Virgin Islands with an energy of 0.48. In Asia, the national anthems are more spread out between the different values of Valence. Most countries have a Valence greater than 0.5. Compared between the other continents, Asia has the loudest national anthems where China has a loudness of 1.94e-4. Also, two countries have an Energy level above 0.5, Qatar with an Energy level of 0.5710 and Kuwait with a level of 0.5760. Europe has the most national anthems in Minor and it seems that most countries also have a national anthem with a Valence smaller than 0.5.
+
+
+### Chromagram of the loudest national anthem in the world
+#### Chromagram China
+
+``` {r}
+china_chroma <-
+  get_tidy_audio_analysis("50Ex1WYMkbe4mwdroVdLFP") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches)
+
+china_chroma |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma() |> 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
+  theme_minimal() +
+  scale_fill_viridis_c()
 
 ```
 
-### Chart C
+***
+The chromagram shows a lot of repetitive G, D and B.
+
+### Similarity Matrix
+#### Timbre
 
 ```{r}
+# Cepstrograms
+bzt <-
+  get_tidy_audio_analysis("50Ex1WYMkbe4mwdroVdLFP") |> # Change URI.
+  compmus_align(bars, segments) |>                     # Change `bars`
+  select(bars) |>                                      #   in all three
+  unnest(bars) |>                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+          compmus_summarise, pitches,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) |>
+  mutate(
+    timbre =
+      map(segments,
+          compmus_summarise, timbre,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+
+bzt |>
+  compmus_gather_timbre() |>
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = basis,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
+  scale_fill_viridis_c() +                              
+  theme_classic()+
+  ggtitle("Timbre")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+# SELF SIMILARITY MATRIX
+bzt |>
+  compmus_self_similarity(timbre, "cosine") |> 
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  labs(x = "", y = "")+
+  ggtitle("Timbre")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+#### Chroma
+
+```{r}
+
+bzt <-
+  get_tidy_audio_analysis("50Ex1WYMkbe4mwdroVdLFP") |> # Change URI.
+  compmus_align(bars, segments) |>                     # Change `bars`
+  select(bars) |>                                      #   in all three
+  unnest(bars) |>                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+          compmus_summarise, pitches,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) |>
+  mutate(
+    timbre =
+      map(segments,
+          compmus_summarise, timbre,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+
+
+bzt |>
+  mutate(pitches = map(pitches, compmus_normalise, "chebyshev")) |>
+  compmus_gather_chroma() |> 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
+  theme_minimal() +
+  scale_fill_viridis_c()+
+  ggtitle("Chroma")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+
+
+# SELF SIMILARITY MATRIX
+bzt |>
+  compmus_self_similarity(pitches, "cosine") |> 
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  labs(x = "", y = "") +
+  ggtitle("Chroma")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+***
+In this section, the chroma and timbre of the Chinese National Anthem are compared.
+The first plots show the timbre changes which are mostly present on the c3 level. When listening to the song the timbre seems to correlate with the sounds of the trumpets. At around 6 seconds there is a small dip visible and at around 21 seconds there is a gap which align with the sound of the trumpets in the song.
+
+The chromagram shows that the song is mostly grounded by B, G, D. Like the cepstrogram that shows the timbre, at around 21 seconds there is a clear gap visible, where D gets a lower magnitude. The magnitude of G and B get bigger around that time.
+
+Conclusions
+=========================================
+### Conclusions
+
+```{r}
+
 
 ```
 
