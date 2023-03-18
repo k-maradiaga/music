@@ -768,10 +768,6 @@ Typical national anthems are hard to define but one national anthem that stands 
 
 It is important to note that the corpus is representative of all the national anthems of today, however, many national anthems have changed over time since their original composition. This can be seen as a limitation of the analysis, as it does not account for the historical evolution of national anthems. Nevertheless, this corpus offers a wealth of information about the musical characteristics of national anthems and is still able to provide a strong representation of the cultural heritage of a country.
 
-***
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/64wQFeHk3LgbPB2x6z3JNk?utm_source=generator" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
-
-
 Conclusions {data-icon="ion-document"}
 =========================================
 ### Conclusions
