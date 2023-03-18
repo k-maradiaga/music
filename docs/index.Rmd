@@ -19,10 +19,61 @@ library(compmus)
 europe <- get_playlist_audio_features("", "64wQFeHk3LgbPB2x6z3JNk")
 asia <- get_playlist_audio_features("", "1YPj89O7XSAEwHSqQmquck")
 americas <- get_playlist_audio_features("", "3col0xqk1N1zGenOzf5O34")
+
 ```
 
 Visualizations {.storyboard data-icon="ion-stats-bars"}
 =========================================
+### Tempogram of the Dutch national anthem
+
+```{r}
+graveola <- get_tidy_audio_analysis("30xbueSacPQZrRR7ZD6sST")
+
+graveola_plot <- graveola |>
+  tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic() +
+  ggtitle('The Dutch National Anthem')
+
+ggplotly(graveola_plot)
+
+```
+***
+
+### Histogram of tempi
+
+```{r}
+awards <-
+  bind_rows(
+    europe |> mutate(category = "Europe"),
+    asia |> mutate(category = "Asia"),
+    americas |> mutate(category = "Americas")
+  )
+
+
+
+cbPalette <- c("#8dd3c7",'#ffffb3','#bebada','#fb8072','#80b1d3','#fdb462','#b3de69','#fccde5')
+
+barplotje <- awards %>% 
+  ggplot(aes(x =tempo)) +
+  geom_histogram(binwidth = 15, fill="darkgreen") +
+  facet_wrap(~category) +
+  ggtitle("Histogram of tempi per continent")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  labs(x = "Tempo (Bpm)", y = "Count") +
+  theme_minimal() +
+  scale_fill_manual(values=cbPalette)
+
+
+ggplotly(barplotje, tooltip = c('count'))
+```
+***
+The continents all have national anthems around 100 beats per minute. Europe has the most amount of national anthems that have a tempo with a beat per minute higher than 150.
+
+
 ### Chordogram of the most vs least danceable national anthem
 #### Chordogram of the most danceable national anthem 
 
@@ -717,9 +768,8 @@ Typical national anthems are hard to define but one national anthem that stands 
 
 It is important to note that the corpus is representative of all the national anthems of today, however, many national anthems have changed over time since their original composition. This can be seen as a limitation of the analysis, as it does not account for the historical evolution of national anthems. Nevertheless, this corpus offers a wealth of information about the musical characteristics of national anthems and is still able to provide a strong representation of the cultural heritage of a country.
 
-```{r}
-
-```
+***
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/64wQFeHk3LgbPB2x6z3JNk?utm_source=generator" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
 
 
 Conclusions {data-icon="ion-document"}
