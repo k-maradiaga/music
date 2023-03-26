@@ -16,6 +16,7 @@ library(ggplot2)
 library(spotifyr)
 library(plotly)
 library(compmus)
+library(tidymodels)
 europe <- get_playlist_audio_features("", "64wQFeHk3LgbPB2x6z3JNk")
 asia <- get_playlist_audio_features("", "1YPj89O7XSAEwHSqQmquck")
 americas <- get_playlist_audio_features("", "3col0xqk1N1zGenOzf5O34")
@@ -24,6 +25,116 @@ americas <- get_playlist_audio_features("", "3col0xqk1N1zGenOzf5O34")
 
 Visualizations {.storyboard data-icon="ion-stats-bars"}
 =========================================
+### Clustering theanthems of the different continents
+#### Feature importance using random forest
+```{r}
+anthems <-
+  bind_rows(
+    europe |> mutate(playlist = "Europe") |> slice_head(n = 20),
+    americas |> mutate(playlist = "Americas") |> slice_head(n = 20),
+    asia |> mutate(playlist = "Asia") |> slice_head(n = 20)
+  ) |> 
+  add_audio_analysis()
+
+anthems_features <-
+  anthems |>  # For your portfolio, change this to the name of your corpus.
+  mutate(
+    playlist = factor(playlist),
+    segments = map2(segments, key, compmus_c_transpose),
+    pitches =
+      map(
+        segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean",
+      )
+  ) |>
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) |>
+  mutate_at(vars(pitches, timbre), map, bind_rows) |>
+  unnest(cols = c(pitches, timbre))
+
+anthems_recipe <-
+  recipe(
+    playlist ~
+      danceability +
+      energy +
+      loudness +
+      speechiness +
+      acousticness +
+      instrumentalness +
+      liveness +
+      valence +
+      tempo +
+      duration +
+      C + `C#|Db` + D + `D#|Eb` +
+      E + `F` + `F#|Gb` + G +
+      `G#|Ab` + A + `A#|Bb` + B +
+      c01 + c02 + c03 + c04 + c05 + c06 +
+      c07 + c08 + c09 + c10 + c11 + c12,
+    data = anthems_features           # Use the same name as the previous block.
+  ) |>
+  step_center(all_predictors()) |>
+  step_scale(all_predictors())      # Converts to z-scores.
+# step_range(all_predictors())    # Sets range to [0, 1].
+
+anthem_cv <- anthems_features |> vfold_cv(5)
+
+forest_model <-
+  rand_forest() |>
+  set_mode("classification") |> 
+  set_engine("ranger", importance = "impurity")
+anthem_forest <- 
+  workflow() |> 
+  add_recipe(anthems_recipe) |> 
+  add_model(forest_model) |> 
+  fit_resamples(
+    anthem_cv, 
+    control = control_resamples(save_pred = TRUE)
+  )
+
+plot_features <- workflow() |> 
+  add_recipe(anthems_recipe) |> 
+  add_model(forest_model) |> 
+  fit(anthems_features) |> 
+  pluck("fit", "fit", "fit") |>
+  ranger::importance() |> 
+  enframe() |> 
+  mutate(name = fct_reorder(name, value)) |> 
+  ggplot(aes(name, value)) + 
+  geom_col() + 
+  coord_flip() +
+  theme_minimal() +
+  labs(x = NULL, y = "Importance")
+
+ggplotly(plot_features)
+
+```
+
+#### Important features
+
+```{r}
+plot_c <- anthems_features |>
+  ggplot(aes(x = liveness, y = energy, colour = playlist, size = speechiness)) +
+  geom_point(alpha = 0.8) +
+  scale_color_viridis_d() +
+  labs(
+    x = "Liveness",
+    y = "Energy",
+    size = "Speechiness",
+    colour = "Playlist"
+  )
+
+ggplotly(plot_c)
+```
+***
+Text for clustering
+
+
 ### Tempogram of the Dutch national anthem
 
 ```{r}
@@ -42,6 +153,8 @@ ggplotly(graveola_plot)
 
 ```
 ***
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/30xbueSacPQZrRR7ZD6sST?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
 
 ### Histogram of tempi
 
@@ -754,11 +867,17 @@ china_chroma |>
 
 ***
 
+
+
+
 The chromagram shows a lot of repetitive G, D and B.
 
 
 Corpus {data-icon="ion-ios-musical-notes"}
 =========================================
+
+Column {data-width=600}
+-------------------------------------
 
 ### Introduction
 
@@ -767,6 +886,18 @@ The corpus that is used in my analysis consists out of all the national anthems 
 Typical national anthems are hard to define but one national anthem that stands out from the rest is the one from Nepal which anthem was introduced relatively recently and therefore uses more modern instruments distinguishing it from most older anthems.
 
 It is important to note that the corpus is representative of all the national anthems of today, however, many national anthems have changed over time since their original composition. This can be seen as a limitation of the analysis, as it does not account for the historical evolution of national anthems. Nevertheless, this corpus offers a wealth of information about the musical characteristics of national anthems and is still able to provide a strong representation of the cultural heritage of a country.
+
+Column {data-width=400}
+-------------------------------------
+    
+### Corpus
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/64wQFeHk3LgbPB2x6z3JNk?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/3col0xqk1N1zGenOzf5O34?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/1YPj89O7XSAEwHSqQmquck?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+
 
 Conclusions {data-icon="ion-document"}
 =========================================
