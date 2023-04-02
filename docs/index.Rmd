@@ -23,142 +23,44 @@ americas <- get_playlist_audio_features("", "3col0xqk1N1zGenOzf5O34")
 
 ```
 
+Corpus {data-icon="ion-ios-musical-notes"}
+=========================================
+
+Column {data-width=600}
+-------------------------------------
+
+### Introduction
+
+The corpus that is used in my analysis consists out of all the national anthems of the world where three playlists have split up the continents into three categories. The aim of this corpus is to analyze what musical characteristics of a song make it a national anthem in specific continents around the world. I find it interesting to see how one song can become so nationally known and rooted in a country. Within the corpus the music therefore all share the common factor that it is the national anthem of a country. One interesting aspect to consider is the geographical and cultural influences of national anthems to see if countries that are close together also share similarities of the same style in their national anthems.
+
+Typical national anthems are hard to define but one national anthem that stands out from the rest is the one from Nepal which anthem was introduced relatively recently and therefore uses more modern instruments distinguishing it from most older anthems.
+
+It is important to note that the corpus is representative of all the national anthems of today, however, many national anthems have changed over time since their original composition. This can be seen as a limitation of the analysis, as it does not account for the historical evolution of national anthems. Also, the national anthems in the corpus do not include any vocals but consists only out of the instrumental part. This could affect how the song is perceived because for many national anthems, the lyrics are part of conveying an important message of a country. Nevertheless, this corpus offers a wealth of information about the musical characteristics of national anthems and is still able to provide a strong representation of the cultural heritage of a country.
+
+Column {data-width=400}
+-------------------------------------
+    
+### Europe
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/64wQFeHk3LgbPB2x6z3JNk?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+
+    
+### Americas
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/3col0xqk1N1zGenOzf5O34?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+
+
+### Asia
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/1YPj89O7XSAEwHSqQmquck?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+
+
 Visualizations {.storyboard data-icon="ion-stats-bars"}
 =========================================
-### Clustering theanthems of the different continents
-#### Feature importance using random forest
-```{r}
-anthems <-
-  bind_rows(
-    europe |> mutate(playlist = "Europe") |> slice_head(n = 20),
-    americas |> mutate(playlist = "Americas") |> slice_head(n = 20),
-    asia |> mutate(playlist = "Asia") |> slice_head(n = 20)
-  ) |> 
-  add_audio_analysis()
-
-anthems_features <-
-  anthems |>  # For your portfolio, change this to the name of your corpus.
-  mutate(
-    playlist = factor(playlist),
-    segments = map2(segments, key, compmus_c_transpose),
-    pitches =
-      map(
-        segments,
-        compmus_summarise, pitches,
-        method = "mean", norm = "manhattan"
-      ),
-    timbre =
-      map(
-        segments,
-        compmus_summarise, timbre,
-        method = "mean",
-      )
-  ) |>
-  mutate(pitches = map(pitches, compmus_normalise, "clr")) |>
-  mutate_at(vars(pitches, timbre), map, bind_rows) |>
-  unnest(cols = c(pitches, timbre))
-
-anthems_recipe <-
-  recipe(
-    playlist ~
-      danceability +
-      energy +
-      loudness +
-      speechiness +
-      acousticness +
-      instrumentalness +
-      liveness +
-      valence +
-      tempo +
-      duration +
-      C + `C#|Db` + D + `D#|Eb` +
-      E + `F` + `F#|Gb` + G +
-      `G#|Ab` + A + `A#|Bb` + B +
-      c01 + c02 + c03 + c04 + c05 + c06 +
-      c07 + c08 + c09 + c10 + c11 + c12,
-    data = anthems_features           # Use the same name as the previous block.
-  ) |>
-  step_center(all_predictors()) |>
-  step_scale(all_predictors())      # Converts to z-scores.
-# step_range(all_predictors())    # Sets range to [0, 1].
-
-anthem_cv <- anthems_features |> vfold_cv(5)
-
-forest_model <-
-  rand_forest() |>
-  set_mode("classification") |> 
-  set_engine("ranger", importance = "impurity")
-anthem_forest <- 
-  workflow() |> 
-  add_recipe(anthems_recipe) |> 
-  add_model(forest_model) |> 
-  fit_resamples(
-    anthem_cv, 
-    control = control_resamples(save_pred = TRUE)
-  )
-
-plot_features <- workflow() |> 
-  add_recipe(anthems_recipe) |> 
-  add_model(forest_model) |> 
-  fit(anthems_features) |> 
-  pluck("fit", "fit", "fit") |>
-  ranger::importance() |> 
-  enframe() |> 
-  mutate(name = fct_reorder(name, value)) |> 
-  ggplot(aes(name, value)) + 
-  geom_col() + 
-  coord_flip() +
-  theme_minimal() +
-  labs(x = NULL, y = "Importance")
-
-ggplotly(plot_features)
-
-```
-
-#### Important features
+### Histogram of Keys {data-commentary-width=400}
 
 ```{r}
-plot_c <- anthems_features |>
-  ggplot(aes(x = liveness, y = energy, colour = playlist, size = speechiness)) +
-  geom_point(alpha = 0.8) +
-  scale_color_viridis_d() +
-  labs(
-    x = "Liveness",
-    y = "Energy",
-    size = "Speechiness",
-    colour = "Playlist"
-  )
 
-ggplotly(plot_c)
-```
-***
-Text for clustering
-
-
-### Tempogram of the Dutch national anthem
-
-```{r}
-graveola <- get_tidy_audio_analysis("30xbueSacPQZrRR7ZD6sST")
-
-graveola_plot <- graveola |>
-  tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
-  ggplot(aes(x = time, y = bpm, fill = power)) +
-  geom_raster() +
-  scale_fill_viridis_c(guide = "none") +
-  labs(x = "Time (s)", y = "Tempo (BPM)") +
-  theme_classic() +
-  ggtitle('The Dutch National Anthem')
-
-ggplotly(graveola_plot)
-
-```
-***
-
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/30xbueSacPQZrRR7ZD6sST?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
-
-### Histogram of tempi
-
-```{r}
 awards <-
   bind_rows(
     europe |> mutate(category = "Europe"),
@@ -171,20 +73,88 @@ awards <-
 cbPalette <- c("#8dd3c7",'#ffffb3','#bebada','#fb8072','#80b1d3','#fdb462','#b3de69','#fccde5')
 
 barplotje <- awards %>% 
-  ggplot(aes(x =tempo)) +
-  geom_histogram(binwidth = 15, fill="darkgreen") +
+  ggplot(aes(x = key_name, fill=key_name)) +
+  geom_bar() +
   facet_wrap(~category) +
-  ggtitle("Histogram of tempi per continent")+
+  ggtitle("Histogram of Keys per continent")+
+  scale_fill_manual(values=cbPalette) +
   theme(plot.title = element_text(hjust = 0.5))+
-  labs(x = "Tempo (Bpm)", y = "Count") +
-  theme_minimal() +
-  scale_fill_manual(values=cbPalette)
+  labs(x = "Key name", y = "Count")
 
 
 ggplotly(barplotje, tooltip = c('count'))
 ```
 ***
-The continents all have national anthems around 100 beats per minute. Europe has the most amount of national anthems that have a tempo with a beat per minute higher than 150.
+First, lets look at the amount of keys present in each playlist.
+The histogram of the American national anthems shows a high count of the key A#. The keys C# and D are missing in the histogram.
+The histogram of the European continent has the most amount of A# keys and is the only continent missing the key C.
+The national anthems of the continent of Asia have the most amount of different keys and the occurrences of each key are more similar.
+
+### Instrumentalness vs danceability
+
+#### Instrumentalness vs danceability
+
+```{r}
+
+awards <-
+  bind_rows(
+    europe |> mutate(category = "Europe"),
+    asia |> mutate(category = "Asia"),
+    americas |> mutate(category = "Americas")
+  )
+
+
+
+plot1 <- 
+awards |>                    # Start with awards.
+  mutate(
+    mode = ifelse(mode == 0, "Minor", "Major")
+  ) |>
+  ggplot(                     # Set up the plot.
+    aes(
+      x = instrumentalness,
+      y = danceability,
+      size = energy,
+      colour = mode,
+      text = track.name
+    )
+  ) +
+  geom_point() +              # Scatter plot.
+  geom_rug(linewidth = 0.1) + # Add 'fringes' to show data distribution.
+  
+  facet_wrap(~ category) +    # Separate charts per playlist.
+  scale_x_continuous(         # Fine-tune the x axis.
+    limits = c(0, 1),
+    breaks = c(0, 0.50, 1),   # Use grid-lines for quadrants only.
+    minor_breaks = NULL       # Remove 'minor' grid-lines.
+  ) +
+  scale_y_continuous(         # Fine-tune the y axis in the same way.
+    limits = c(0, 1),
+    breaks = c(0, 0.50, 1),
+    minor_breaks = NULL
+  ) +
+  scale_colour_brewer(        # Use the Color Brewer to choose a palette.
+    type = "qual",            # Qualitative set.
+    palette = "Pastel2"        # Name of the palette is 'Paired'.
+  ) +
+  scale_size_continuous(      # Fine-tune the sizes of each point.
+    trans = "exp",            # Use an exp transformation to emphasise loud.
+    guide = "none"            # Remove the legend for size.
+  ) +
+  theme_light() +             # Use a simpler theme.
+  labs(                       # Make the titles nice.
+    x = "Instrumentalness",
+    y = "Dancebility",
+    colour = "Mode"
+  ) 
+
+
+ggplotly(plot1)
+
+```
+***
+
+This plot shows the danceability and the instrumentalness of the national anthems around the world. The size of the data points indicates the level of energy. The color illustrates whether or not the data point is in Minor or Major. From this plot, the american continent has the most instrumentalness in their national anthems. The most danceable national anthem is in Asia, Kuwait has a danceability of 0.8760. What is also interesting is that within the americas playlist, the national anthems from English speaking countries all have less instrumentalness than the Spanish speaking countries which could mean that culture could have an influence on the national anthem instrumentalness.
 
 
 ### Chordogram of the most vs least danceable national anthem
@@ -439,6 +409,58 @@ plot2
 
 These Chordograms show two outliers of the from spotify defined variable danceabelity. The national anthem of Kuwait is the most danceable anthem in the world. The chordogram of this anthem illustrates the different chords over time. A change of chords is visible around 8 seconds, where Bb:min loses intensity and F:maj starts to gain intensity. At around 21 seconds this changes back to where it was in the beginning. The second chordogram is the chordogram of Aruba, the least danceable anthem in the world. This chordogram shows changes at around 15 seconds, 50 seconds, 70 seconds and 85 seconds. What is different between these chordograms is that the least danceable song has more changes in chords than that the most danceable song has which looks like it uses more or less the same chords. It could be because of this difference in the amount of changes that Spotify characterizes songs as more danceable or less danceable.
 
+### Histogram of tempi
+
+```{r}
+awards <-
+  bind_rows(
+    europe |> mutate(category = "Europe"),
+    asia |> mutate(category = "Asia"),
+    americas |> mutate(category = "Americas")
+  )
+
+
+
+cbPalette <- c("#8dd3c7",'#ffffb3','#bebada','#fb8072','#80b1d3','#fdb462','#b3de69','#fccde5')
+
+barplotje <- awards %>% 
+  ggplot(aes(x =tempo)) +
+  geom_histogram(binwidth = 15, fill="darkgreen") +
+  facet_wrap(~category) +
+  ggtitle("Histogram of tempi per continent")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  labs(x = "Tempo (Bpm)", y = "Count") +
+  theme_minimal() +
+  scale_fill_manual(values=cbPalette)
+
+
+ggplotly(barplotje, tooltip = c('count'))
+```
+***
+The continents all have national anthems around 100 beats per minute. Europe has the most amount of national anthems that have a tempo with a beat per minute higher than 150.
+
+### Tempogram of the Dutch national anthem
+
+```{r}
+graveola <- get_tidy_audio_analysis("30xbueSacPQZrRR7ZD6sST")
+
+graveola_plot <- graveola |>
+  tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic() +
+  ggtitle('The Dutch National Anthem')
+
+ggplotly(graveola_plot)
+
+```
+***
+
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/30xbueSacPQZrRR7ZD6sST?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+
+This tempogram illustrates the tempo of the Dutch National Anthem, Het Wilhelmus. As is illustrated in the graph, there is no clear visible tempo line throughout the song. The differences in tempo using the Spotify API data for this song shows the difficulty that algorithms still have to correctly identify the tempo.
 
 ### Standard Deviation and mean in the national anthems
 #### Tempo
@@ -529,14 +551,14 @@ ggplotly(jazzp)
 
 ```
 ***
-The Tempo plot shows the standard deviation of the tempo variable from spotify and its mean Tempo in beats per minute. From this plot it can be concluded that the mean tempo of the national anthems in Asia are the lowest. The standard Deviation of Europe seem to be the highest. The national anthems of the American continent have the longest duration.
+The Tempo plot shows the standard deviation of the tempo variable from Spotify and its mean Tempo in beats per minute. From this plot it can be concluded that the mean tempo of the national anthems in Asia are the lowest. The standard Deviation of Europe seem to be the highest. The national anthems of the American continent have the longest duration.
 
-In the second figure, the Timbre of the three continents are plotted. Overall, most of the timbre coefficients seem to be the same between the three continents. Coefficient c1, c2 and c3 however coud be a marker that distinguishes the European continent from the rest with slight changes in its shape.
+In the second figure, the Timbre of the three continents are plotted. Overall, most of the timbre coefficients seem to be the same between the three continents. Coefficient c1, c2 and c3 however could be a marker that distinguishes the European continent from the rest with slight changes in its shape.
 
-### Histogram of Keys {data-commentary-width=400}
 
+### Energy vs Valence
+#### Energy vs Valence
 ```{r}
-
 awards <-
   bind_rows(
     europe |> mutate(category = "Europe"),
@@ -546,25 +568,88 @@ awards <-
 
 
 
-cbPalette <- c("#8dd3c7",'#ffffb3','#bebada','#fb8072','#80b1d3','#fdb462','#b3de69','#fccde5')
+plotje <- awards |>                    # Start with awards.
+  mutate(
+    mode = ifelse(mode == 0, "Minor", "Major")
+  ) |>
+  ggplot(                     # Set up the plot.
+    aes(
+      x = valence,
+      y = energy,
+      size = loudness,
+      colour = mode,
+      text = track.name
+    )
+  ) +
+  geom_point() +              # Scatter plot.
+  geom_rug(linewidth = 0.1) + # Add 'fringes' to show data distribution.
+  
+  facet_wrap(~ category) +    # Separate charts per playlist.
+  scale_x_continuous(         # Fine-tune the x axis.
+    limits = c(0, 1),
+    breaks = c(0, 0.50, 1),   # Use grid-lines for quadrants only.
+    minor_breaks = NULL       # Remove 'minor' grid-lines.
+  ) +
+  scale_y_continuous(         # Fine-tune the y axis in the same way.
+    limits = c(0, 1),
+    breaks = c(0, 0.50, 1),
+    minor_breaks = NULL
+  ) +
+  scale_colour_brewer(        # Use the Color Brewer to choose a palette.
+    type = "qual",            # Qualitative set.
+    palette = "Pastel1"        # Name of the palette is 'Paired'.
+  ) +
+  scale_size_continuous(      # Fine-tune the sizes of each point.
+    trans = "exp",            # Use an exp transformation to emphasise loud.
+    guide = "none"            # Remove the legend for size.
+  ) +
+  theme_minimal() +             # Use a simpler theme.
+  labs(                       # Make the titles nice.
+    x = "Valence",
+    y = "Energy",
+    colour = "Mode"
+  )
 
-barplotje <- awards %>% 
-  ggplot(aes(x = key_name, fill=key_name)) +
-  geom_bar() +
-  facet_wrap(~category) +
-  ggtitle("Histogram of Keys per continent")+
-  scale_fill_manual(values=cbPalette) +
-  theme(plot.title = element_text(hjust = 0.5))+
-  labs(x = "Key name", y = "Count")
-
-
-ggplotly(barplotje, tooltip = c('count'))
+ggplotly(plotje)
 ```
+
 ***
 
-The histogram of the American national anthems shows a high count of the key A#. The keys C# and D are missing in the histogram.
-The histogram of the European continent has the most amount of A# keys and is the only continent missing the key C.
-The national anthems of the continent of Asia have the most amount of different keys and the occurences of each key are more similar.
+This plots compare the Valence and Energy of each country within the playlists. For the american continent, most countries are clearly centered around 0.5 Valence. All the countries have an Energy of 0.5 and are in Major. The country that has the loudest national anthem is Canada with a loudness of 8.10e-5. The country national anthem with the highest Energy is that of the United States Virgin Islands with an energy of 0.48. In Asia, the national anthems are more spread out between the different values of Valence. Most countries have a Valence greater than 0.5. Compared between the other continents, Asia has the loudest national anthems where China has a loudness of 1.94e-4. Also, two countries have an Energy level above 0.5, Qatar with an Energy level of 0.5710 and Kuwait with a level of 0.5760. Europe has the most national anthems in Minor and it seems that most countries also have a national anthem with a Valence smaller than 0.5.
+
+### Chromagram of the loudest national anthem in the world
+
+``` {r}
+china_chroma <-
+  get_tidy_audio_analysis("50Ex1WYMkbe4mwdroVdLFP") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches)
+
+china_chroma |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma() |> 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
+  theme_minimal() +
+  scale_fill_viridis_c() +
+  ggtitle("Chromogram of Yìyǒngjūn Jìnxíngqǔ")
+
+```
+
+***
+<iframe style="border-radius:12px" src="https://open.spotify.com/embed/track/50Ex1WYMkbe4mwdroVdLFP?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+
+
+Illustrated in the chromagram is the loudest national anthem of the world, the Chinese national anthem. The chromagram shows a lot of repetitive G, D and B. At around 21 seconds there is a clear gap visible, where D gets a lower magnitude. The magnitude of G and B get bigger around that time which aligns with the changes you can hear listening at these moments.
 
 ### Similarity Matrix
 #### Timbre
@@ -707,204 +792,129 @@ The first plots show the timbre changes which are mostly present on the c3 level
 
 The chromagram shows that the song is mostly grounded by B, G, D. Like the cepstrogram that shows the timbre, at around 21 seconds there is a clear gap visible, where D gets a lower magnitude. The magnitude of G and B get bigger around that time.
 
+The similarity graphs do not show any clear diagonal lines that could indicate repetitions which is different than expected because the song has many parts that are repeated. 
 
 
-### Instrumentalness vs danceability
-
-#### Instrumentalness vs danceability
-
+### Clustering the anthems of the different continents
+#### Feature importance using random forest
 ```{r}
+europe <- get_playlist_audio_features("", "64wQFeHk3LgbPB2x6z3JNk")
+asia <- get_playlist_audio_features("", "1YPj89O7XSAEwHSqQmquck")
+americas <- get_playlist_audio_features("", "3col0xqk1N1zGenOzf5O34")
 
-awards <-
+anthems <-
   bind_rows(
-    europe |> mutate(category = "Europe"),
-    asia |> mutate(category = "Asia"),
-    americas |> mutate(category = "Americas")
-  )
+    europe |> mutate(playlist = "Europe") |> slice_head(n = 20),
+    americas |> mutate(playlist = "Americas") |> slice_head(n = 20),
+    asia |> mutate(playlist = "Asia") |> slice_head(n = 20)
+  ) |> 
+  add_audio_analysis()
 
-
-
-plot1 <- 
-awards |>                    # Start with awards.
+anthems_features <-
+  anthems |>  # For your portfolio, change this to the name of your corpus.
   mutate(
-    mode = ifelse(mode == 0, "Minor", "Major")
+    playlist = factor(playlist),
+    segments = map2(segments, key, compmus_c_transpose),
+    pitches =
+      map(
+        segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean",
+      )
   ) |>
-  ggplot(                     # Set up the plot.
-    aes(
-      x = instrumentalness,
-      y = danceability,
-      size = energy,
-      colour = mode,
-      text = track.name
-    )
-  ) +
-  geom_point() +              # Scatter plot.
-  geom_rug(linewidth = 0.1) + # Add 'fringes' to show data distribution.
-  
-  facet_wrap(~ category) +    # Separate charts per playlist.
-  scale_x_continuous(         # Fine-tune the x axis.
-    limits = c(0, 1),
-    breaks = c(0, 0.50, 1),   # Use grid-lines for quadrants only.
-    minor_breaks = NULL       # Remove 'minor' grid-lines.
-  ) +
-  scale_y_continuous(         # Fine-tune the y axis in the same way.
-    limits = c(0, 1),
-    breaks = c(0, 0.50, 1),
-    minor_breaks = NULL
-  ) +
-  scale_colour_brewer(        # Use the Color Brewer to choose a palette.
-    type = "qual",            # Qualitative set.
-    palette = "Pastel2"        # Name of the palette is 'Paired'.
-  ) +
-  scale_size_continuous(      # Fine-tune the sizes of each point.
-    trans = "exp",            # Use an exp transformation to emphasise loud.
-    guide = "none"            # Remove the legend for size.
-  ) +
-  theme_light() +             # Use a simpler theme.
-  labs(                       # Make the titles nice.
-    x = "Instrumentalness",
-    y = "Dancebility",
-    colour = "Mode"
-  ) 
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) |>
+  mutate_at(vars(pitches, timbre), map, bind_rows) |>
+  unnest(cols = c(pitches, timbre))
 
+anthems_recipe <-
+  recipe(
+    playlist ~
+      danceability +
+      energy +
+      loudness +
+      speechiness +
+      acousticness +
+      instrumentalness +
+      liveness +
+      valence +
+      tempo +
+      duration +
+      C + `C#|Db` + D + `D#|Eb` +
+      E + `F` + `F#|Gb` + G +
+      `G#|Ab` + A + `A#|Bb` + B +
+      c01 + c02 + c03 + c04 + c05 + c06 +
+      c07 + c08 + c09 + c10 + c11 + c12,
+    data = anthems_features           # Use the same name as the previous block.
+  ) |>
+  step_center(all_predictors()) |>
+  step_scale(all_predictors())      # Converts to z-scores.
+# step_range(all_predictors())    # Sets range to [0, 1].
 
-ggplotly(plot1)
+anthem_cv <- anthems_features |> vfold_cv(5)
 
-```
-***
-
-This plot shows the danceability and the instrumentalness of the national anthems around the world. The size of the data points indicates the level of energy. The color illustrates whether or not the data point is in Minor or Major. From this plot, the american continent has the most instrumentalness in their national anthems. The most danceable national anthem is in Asia, Kuwait has a danceability of 0.8760.
-
-### Energy vs Valence
-#### Energy vs Valence
-```{r}
-awards <-
-  bind_rows(
-    europe |> mutate(category = "Europe"),
-    asia |> mutate(category = "Asia"),
-    americas |> mutate(category = "Americas")
+forest_model <-
+  rand_forest() |>
+  set_mode("classification") |> 
+  set_engine("ranger", importance = "impurity")
+anthem_forest <- 
+  workflow() |> 
+  add_recipe(anthems_recipe) |> 
+  add_model(forest_model) |> 
+  fit_resamples(
+    anthem_cv, 
+    control = control_resamples(save_pred = TRUE)
   )
 
-
-
-plotje <- awards |>                    # Start with awards.
-  mutate(
-    mode = ifelse(mode == 0, "Minor", "Major")
-  ) |>
-  ggplot(                     # Set up the plot.
-    aes(
-      x = valence,
-      y = energy,
-      size = loudness,
-      colour = mode,
-      text = track.name
-    )
-  ) +
-  geom_point() +              # Scatter plot.
-  geom_rug(linewidth = 0.1) + # Add 'fringes' to show data distribution.
-  
-  facet_wrap(~ category) +    # Separate charts per playlist.
-  scale_x_continuous(         # Fine-tune the x axis.
-    limits = c(0, 1),
-    breaks = c(0, 0.50, 1),   # Use grid-lines for quadrants only.
-    minor_breaks = NULL       # Remove 'minor' grid-lines.
-  ) +
-  scale_y_continuous(         # Fine-tune the y axis in the same way.
-    limits = c(0, 1),
-    breaks = c(0, 0.50, 1),
-    minor_breaks = NULL
-  ) +
-  scale_colour_brewer(        # Use the Color Brewer to choose a palette.
-    type = "qual",            # Qualitative set.
-    palette = "Pastel1"        # Name of the palette is 'Paired'.
-  ) +
-  scale_size_continuous(      # Fine-tune the sizes of each point.
-    trans = "exp",            # Use an exp transformation to emphasise loud.
-    guide = "none"            # Remove the legend for size.
-  ) +
-  theme_minimal() +             # Use a simpler theme.
-  labs(                       # Make the titles nice.
-    x = "Valence",
-    y = "Energy",
-    colour = "Mode"
-  )
-
-ggplotly(plotje)
-```
-
-***
-
-This plots compare the Valence and Energy of each country within the playlists. For the american continent, most countries are clearly centered around 0.5 Valence. All the countries have an Energy of 0.5 and are in Major. The country that has the loudest national anthem is Canada with a loudness of 8.10e-5. The country national anthem with the highest Energy is that of the United States Virgin Islands with an energy of 0.48. In Asia, the national anthems are more spread out between the different values of Valence. Most countries have a Valence greater than 0.5. Compared between the other continents, Asia has the loudest national anthems where China has a loudness of 1.94e-4. Also, two countries have an Energy level above 0.5, Qatar with an Energy level of 0.5710 and Kuwait with a level of 0.5760. Europe has the most national anthems in Minor and it seems that most countries also have a national anthem with a Valence smaller than 0.5.
-
-
-### Chromagram of the loudest national anthem in the world
-#### Chromagram China
-
-``` {r}
-china_chroma <-
-  get_tidy_audio_analysis("50Ex1WYMkbe4mwdroVdLFP") |>
-  select(segments) |>
-  unnest(segments) |>
-  select(start, duration, pitches)
-
-china_chroma |>
-  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
-  compmus_gather_chroma() |> 
-  ggplot(
-    aes(
-      x = start + duration / 2,
-      width = duration,
-      y = pitch_class,
-      fill = value
-    )
-  ) +
-  geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
+plot_features <- workflow() |> 
+  add_recipe(anthems_recipe) |> 
+  add_model(forest_model) |> 
+  fit(anthems_features) |> 
+  pluck("fit", "fit", "fit") |>
+  ranger::importance() |> 
+  enframe() |> 
+  mutate(name = fct_reorder(name, value)) |> 
+  ggplot(aes(name, value)) + 
+  geom_col() + 
+  coord_flip() +
   theme_minimal() +
-  scale_fill_viridis_c()
+  labs(x = NULL, y = "Importance")
+
+ggplotly(plot_features)
 
 ```
 
+#### Important features
+
+```{r}
+plot_c <- anthems_features |>
+  ggplot(aes(x = liveness, y = energy, colour = playlist, size = speechiness)) +
+  geom_point(alpha = 0.8) +
+  scale_color_viridis_d() +
+  labs(
+    x = "Liveness",
+    y = "Energy",
+    size = "Speechiness",
+    colour = "Playlist"
+  )
+
+ggplotly(plot_c)
+```
 ***
-
-
-
-
-The chromagram shows a lot of repetitive G, D and B.
-
-
-Corpus {data-icon="ion-ios-musical-notes"}
-=========================================
-
-Column {data-width=600}
--------------------------------------
-
-### Introduction
-
-The corpus that is used in my analysis consists out of all the national anthems of the world. The aim of this corpus is to analyze what musical characteristics of a song make it a national anthem. I find it interesting to see how one song can become so nationally known and rooted in a country. Within the corpus the music therefore all share the common factor that it is the national anthem of a country. One interesting aspect to consider is the geographical and cultural influences of national anthems to see if countries that are close together also share similarities of the same style in their national anthems. Another point of comparison could be the year that the national anthem song has been composed to see if it has any impact on the style of the national anthem compared to other countries that were composed in the same time period.
-
-Typical national anthems are hard to define but one national anthem that stands out from the rest is the one from Nepal which anthem was introduced relatively recently and therefore uses more modern instruments distinguishing it from most older anthems.
-
-It is important to note that the corpus is representative of all the national anthems of today, however, many national anthems have changed over time since their original composition. This can be seen as a limitation of the analysis, as it does not account for the historical evolution of national anthems. Nevertheless, this corpus offers a wealth of information about the musical characteristics of national anthems and is still able to provide a strong representation of the cultural heritage of a country.
-
-Column {data-width=400}
--------------------------------------
-    
-### Corpus
-
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/64wQFeHk3LgbPB2x6z3JNk?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
-
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/3col0xqk1N1zGenOzf5O34?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
-
-<iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/1YPj89O7XSAEwHSqQmquck?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" data-external="1"></iframe>
+Using the data of the Spotify API a random forest classifier is trained to classify the different national anthems into the three continents; Americas, Asia and Europe. The most important features are plotted above and show that Liveness, energy and size all have a high importance when classifying the different national anthems. The plot above shows these variables plotted against each other. On the x-axis Liveness is used and on the y-axis Energy. Each continent has its own color and the size of each data point represents the Speechiness. The plot illustrates that even with these features it will be difficult to classify the national anthems between the different continents because of the overlap between them. However, all the national anthems in Europe have a Liveness less than 0.3 which helps the algorithm to exclude songs above this value to categorize it in the Asian or American continent category.
 
 
 Conclusions {data-icon="ion-document"}
 =========================================
+
+Column {data-width=600}
+-------------------------------------
 ### Conclusions
 
-```{r}
-
-
-```
+National anthems around the world are not as different as expected. Most anthems share many similarities in chroma, timbre and tempo. Between continents there are small differences which could make certain national anthems in a continent stand out. In the americas playlist, all the english speaking countries seem to cluster together when looking at instrumentalness. Comparing the playlists, musical features like liveness, energy and speechiness are important when looking for aspects between the naional anthems that differentiate the anthems between the continents.
 
